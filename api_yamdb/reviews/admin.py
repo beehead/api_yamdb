@@ -2,7 +2,7 @@
 
 from django.contrib import admin
 
-from .models import Categories, Genres, Title, TitleGenres, Review, Comment
+from .models import Categories, Comment, Genres, Review, Title, TitleGenres
 
 
 @admin.register(Categories)

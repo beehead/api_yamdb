@@ -4,16 +4,11 @@ import csv
 
 from accounts.models import User
 from django.core.management.base import BaseCommand, CommandError
+from reviews.models import (
+    Categories, Comment, Genres, Review, Title, TitleGenres
+)
 
 from api_yamdb.settings import BASE_DIR
-from reviews.models import (
-    Categories,
-    Comment,
-    Genres,
-    Review,
-    Title,
-    TitleGenres
-)
 
 
 class Command(BaseCommand):

@@ -2,10 +2,9 @@
 
 from datetime import datetime
 
-from django.db import models
-from django.core.validators import MaxValueValidator, MinValueValidator
-
 from accounts.models import User
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models
 
 
 class Categories(models.Model):
@@ -25,7 +24,7 @@ class Categories(models.Model):
         ordering = ('name',)
 
     def __str__(self):
-        return self.name
+        return f'{self.name}'
 
 
 class Genres(models.Model):
@@ -45,7 +44,7 @@ class Genres(models.Model):
         ordering = ('name',)
 
     def __str__(self):
-        return self.name
+        return f'{self.name}'
 
 
 class Title(models.Model):
@@ -91,7 +90,7 @@ class Title(models.Model):
         ]
 
     def __str__(self):
-        return self.name
+        return f'{self.name}'
 
 
 class TitleGenres(models.Model):
@@ -155,7 +154,7 @@ class Review(models.Model):
         ordering = ('pub_date',)
 
     def __str__(self):
-        return self.text
+        return f'{self.text}'
 
 
 class Comment(models.Model):

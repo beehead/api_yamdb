@@ -1,17 +1,13 @@
 """Эндпойнты приложения YaMDb."""
 
+from api.views import (
+    CategoryViewSet, CommentViewSet, GenreViewSet,
+    ReviewViewSet, TitleViewSet, UserViewSet,
+    get_jwt, send_token
+)
+
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
-from api.views import (
-    send_token,
-    get_jwt,
-    CategoryViewSet,
-    GenreViewSet,
-    TitleViewSet,
-    UserViewSet,
-    CommentViewSet,
-    ReviewViewSet,
-)
 
 router = DefaultRouter()
 

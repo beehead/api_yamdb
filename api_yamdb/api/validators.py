@@ -1,7 +1,7 @@
 import re
-from rest_framework import serializers
 
 from accounts.models import User
+from rest_framework import serializers
 
 
 def validate_username(value):

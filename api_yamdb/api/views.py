@@ -1,12 +1,11 @@
-import random
-import string
-
+from django.conf import settings
+from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.db.models import Avg
 from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view
-from rest_framework import viewsets, filters, mixins, status
+from rest_framework import viewsets, filters, status
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework.permissions import IsAuthenticated
@@ -17,6 +16,7 @@ from rest_framework.pagination import LimitOffsetPagination
 from accounts.models import User
 from reviews.models import Categories, Genres, Title, Review
 from .filters import TitleFilters
+from .mixins import CRUDMixin
 from .permissions import (
     IsAdmin,
     IsAdminOrReadOnly,
@@ -24,7 +24,7 @@ from .permissions import (
 )
 from .serializers import (
     SendTokenSerializer,
-    GetGWTSerializer,
+    GetJWTSerializer,
     CategoriesSerializer,
     GenresSerializer,
     TitleSerializer,
@@ -32,12 +32,8 @@ from .serializers import (
     UserSerializer,
     AdminSerializer,
     ReviewSerializer,
-    CommentSerializer
+    CommentSerializer,
 )
-
-
-EMAIL_SENDER = 'admin <admin@yamdb.ru>'
-RANDOM_STRING_LENGTH = 20
 
 
 @api_view(['POST'])
@@ -56,28 +52,16 @@ def send_token(request):
     username = request.data.get('username', False)
 
     if serializer.is_valid():
-        random_string = ''.join(
-            random.choices(
-                string.ascii_uppercase + string.digits, k=RANDOM_STRING_LENGTH
-            )
-        )
         user = User.objects.filter(email=email).first()
-        user_check = User.objects.filter(username=username).first()
-        if ((user or user_check) and user != user_check):
-            return Response(
-                serializer.errors,
-                status=status.HTTP_400_BAD_REQUEST
-            )
         if not user:
             User.objects.create_user(
                 email=email,
                 username=username)
-        User.objects.filter(email=email).update(
-            confirmation_code=random_string
-        )
+        user = User.objects.filter(email=email).first()
+        token = default_token_generator.make_token(user)
         mail_subject = 'Код подтверждения на YAMDB'
-        message = f'Ваш код подтверждения: {random_string}'
-        send_mail(mail_subject, message, EMAIL_SENDER, [email])
+        message = f'Ваш код подтверждения: {token}'
+        send_mail(mail_subject, message, settings.EMAIL_HOST_USER, [email])
         answer = {
             'email': email,
             'username': username,
@@ -88,12 +72,27 @@ def send_token(request):
 
 @api_view(['POST'])
 def get_jwt(request):
-    serializer = GetGWTSerializer(data=request.data)
+    """
+    This function generates a JSON Web Token (JWT) for a given user.
+    Parameters:
+    -----------
+    request : HttpRequest object
+        The request object that contains the user data.
+    Returns:
+    --------
+    Response object
+        The response object that contains the JWT for the user.
+    Raises:
+    -------
+    Http404
+        If the user is not found in the database.
+    """
+    serializer = GetJWTSerializer(data=request.data)
     if serializer.is_valid():
         username = serializer.validated_data['username']
         confirmation_code = serializer.validated_data['confirmation_code']
         user = get_object_or_404(User, username=username)
-        if user.confirmation_code != confirmation_code:
+        if not default_token_generator.check_token(user, confirmation_code):
             return Response(
                 'Неверный код подтверждения',
                 status=status.HTTP_400_BAD_REQUEST
@@ -144,10 +143,7 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class CategoryViewSet(mixins.ListModelMixin,
-                      mixins.CreateModelMixin,
-                      mixins.DestroyModelMixin,
-                      viewsets.GenericViewSet):
+class CategoryViewSet(CRUDMixin):
     queryset = Categories.objects.all()
     serializer_class = CategoriesSerializer
     permission_classes = (IsAdminOrReadOnly,)
@@ -156,10 +152,7 @@ class CategoryViewSet(mixins.ListModelMixin,
     lookup_field = 'slug'
 
 
-class GenreViewSet(mixins.ListModelMixin,
-                   mixins.CreateModelMixin,
-                   mixins.DestroyModelMixin,
-                   viewsets.GenericViewSet):
+class GenreViewSet(CRUDMixin):
     queryset = Genres.objects.all()
     serializer_class = GenresSerializer
     permission_classes = (IsAdminOrReadOnly,)
@@ -169,7 +162,7 @@ class GenreViewSet(mixins.ListModelMixin,
 
 
 class TitleViewSet(viewsets.ModelViewSet):
-    queryset = Title.objects.all().annotate(Avg("reviews__score"))
+    queryset = Title.objects.all().annotate(rating=Avg('reviews__score'))
     serializer_class = TitleSerializer
     permission_classes = (IsAdminOrReadOnly,)
     filter_backends = (DjangoFilterBackend,)
@@ -194,7 +187,8 @@ class CommentViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         review = get_object_or_404(
             Review,
-            id=self.kwargs.get('review_id'))
+            id=self.kwargs.get('review_id')
+        )
         serializer.save(author=self.request.user, review=review)
 
 
@@ -205,7 +199,8 @@ class ReviewViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         title = get_object_or_404(
             Title,
-            id=self.kwargs.get('title_id'))
+            id=self.kwargs.get('title_id')
+        )
         return title.reviews.all()
 
     def perform_create(self, serializer):

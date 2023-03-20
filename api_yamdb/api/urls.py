@@ -10,7 +10,7 @@ from api.views import (
     TitleViewSet,
     UserViewSet,
     CommentViewSet,
-    ReviewViewSet
+    ReviewViewSet,
 )
 
 router = DefaultRouter()

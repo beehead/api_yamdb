@@ -6,7 +6,7 @@ from django.db.models import Avg
 from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view
-from rest_framework import viewsets, filters, mixins, status
+from rest_framework import viewsets, filters, status
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework.permissions import IsAuthenticated
@@ -17,6 +17,7 @@ from rest_framework.pagination import LimitOffsetPagination
 from accounts.models import User
 from reviews.models import Categories, Genres, Title, Review
 from .filters import TitleFilters
+from .mixins import CRUDMixin
 from .permissions import (
     IsAdmin,
     IsAdminOrReadOnly,
@@ -144,10 +145,7 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class CategoryViewSet(mixins.ListModelMixin,
-                      mixins.CreateModelMixin,
-                      mixins.DestroyModelMixin,
-                      viewsets.GenericViewSet):
+class CategoryViewSet(CRUDMixin):
     queryset = Categories.objects.all()
     serializer_class = CategoriesSerializer
     permission_classes = (IsAdminOrReadOnly,)
@@ -156,10 +154,7 @@ class CategoryViewSet(mixins.ListModelMixin,
     lookup_field = 'slug'
 
 
-class GenreViewSet(mixins.ListModelMixin,
-                   mixins.CreateModelMixin,
-                   mixins.DestroyModelMixin,
-                   viewsets.GenericViewSet):
+class GenreViewSet(CRUDMixin):
     queryset = Genres.objects.all()
     serializer_class = GenresSerializer
     permission_classes = (IsAdminOrReadOnly,)
@@ -169,7 +164,7 @@ class GenreViewSet(mixins.ListModelMixin,
 
 
 class TitleViewSet(viewsets.ModelViewSet):
-    queryset = Title.objects.all().annotate(Avg("reviews__score"))
+    queryset = Title.objects.all().annotate(rating=Avg('reviews__score'))
     serializer_class = TitleSerializer
     permission_classes = (IsAdminOrReadOnly,)
     filter_backends = (DjangoFilterBackend,)

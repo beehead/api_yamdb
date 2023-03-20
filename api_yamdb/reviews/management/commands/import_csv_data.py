@@ -4,8 +4,16 @@ import csv
 
 from accounts.models import User
 from django.core.management.base import BaseCommand, CommandError
-from reviews.models import (Categories, Comment, Genres, Review, Title,
-                            TitleGenres)
+
+from api_yamdb.settings import BASE_DIR
+from reviews.models import (
+    Categories,
+    Comment,
+    Genres,
+    Review,
+    Title,
+    TitleGenres
+)
 
 
 class Command(BaseCommand):
@@ -22,17 +30,10 @@ class Command(BaseCommand):
             Review: 'review.csv',
             Comment: 'comments.csv',
         }
-        answer = input('Операция импорта сотрет данные '
-                       'из ваших моделей. Продолжить? (y/n)')
-        if answer == 'y':
-            for key in cvs_files.keys():
-                key.objects.all().delete()
-        else:
-            self.stdout.write('Скрипт прерван.')
-            quit()
 
         for model, file in cvs_files.items():
-            with open(f'static/data/{file}', 'r', encoding='utf8') as f:
+            with open(f'{BASE_DIR}/static/data/{file}',
+                      'r', encoding='utf8') as f:
                 cvs_rows = csv.DictReader(f, delimiter=',')
                 for row in cvs_rows:
                     shallow_copy = row.copy()

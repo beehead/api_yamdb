@@ -1,5 +1,7 @@
 """Модели для приложения reviews."""
 
+from datetime import datetime
+
 from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
 
@@ -53,7 +55,12 @@ class Title(models.Model):
         verbose_name='Название'
     )
     year = models.PositiveIntegerField(
-        verbose_name='Год'
+        verbose_name='Год',
+        validators=[
+            MaxValueValidator(
+                int(datetime.now().year),
+                message='Год не может быть больше текущего!')
+        ],
     )
     description = models.TextField(
         blank=True,

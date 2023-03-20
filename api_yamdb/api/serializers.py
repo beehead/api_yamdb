@@ -1,12 +1,13 @@
 """Сериализаторы для приложения Api."""
 import datetime
 
-from rest_framework import serializers
 from accounts.models import User
-from reviews.models import Categories, Genres, Title, Comment, Review
-from .validators import validate_dublicates, validate_username
-from django.shortcuts import get_object_or_404
 from django.core.exceptions import ValidationError
+from django.shortcuts import get_object_or_404
+from rest_framework import serializers
+from reviews.models import Categories, Comment, Genres, Review, Title
+
+from .validators import validate_dublicates, validate_username
 
 
 class UserSerializer(serializers.ModelSerializer):

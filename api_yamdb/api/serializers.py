@@ -1,36 +1,12 @@
 """Сериализаторы для приложения Api."""
 import datetime
-import re
 
 from rest_framework import serializers
 from accounts.models import User
 from reviews.models import Categories, Genres, Title, Comment, Review
-
+from .validators import validate_dublicates, validate_username
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import ValidationError
-
-
-def validate_username(value):
-    regex = r'^[\w.@+-]+$'
-    if value == 'me' or not re.match(regex, value):
-        raise serializers.ValidationError('Invalid username format')
-    return value
-
-
-def validate_role(value):
-    roles = ['user', 'admin', 'moderator']
-    if value not in roles:
-        raise serializers.ValidationError('Invalid role')
-    return value
-
-
-def validate_dublicates(value):
-    if (
-        User.objects.filter(username__iexact=value).exists()
-        or User.objects.filter(email__iexact=value).exists()
-    ):
-        raise serializers.ValidationError('Дубликат!')
-    return value
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -94,15 +70,36 @@ class AdminSerializer(serializers.ModelSerializer):
 
 
 class SendTokenSerializer(serializers.Serializer):
-    email = serializers.EmailField(required=True, max_length=254)
+    email = serializers.EmailField(
+        required=True,
+        max_length=254,
+    )
     username = serializers.CharField(
         required=True,
         max_length=150,
-        validators=[validate_username]
+        validators=[validate_username],
     )
 
+    def validate(self, attrs):
+        email = attrs.get('email')
+        username = attrs.get('username')
 
-class GetGWTSerializer(serializers.Serializer):
+        if User.objects.filter(email__iexact=email).exists():
+            user = User.objects.get(email__iexact=email)
+            if user.username != username:
+                raise serializers.ValidationError(
+                    'Пользователь с таким email уже существует'
+                )
+        if User.objects.filter(username__iexact=username).exists():
+            user = User.objects.get(username__iexact=username)
+            if user.email != email:
+                raise serializers.ValidationError(
+                    'Пользователь с таким username уже существует'
+                )
+        return attrs
+
+
+class GetJWTSerializer(serializers.Serializer):
     username = serializers.CharField(required=True)
     confirmation_code = serializers.CharField(required=True)
 

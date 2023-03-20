@@ -127,6 +127,7 @@ USE_L10N = True
 
 USE_TZ = True
 
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
 
 # Static files (CSS, JavaScript, Images)
 

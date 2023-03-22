@@ -18,11 +18,16 @@ from .filters import TitleFilters
 from .mixins import CRUDMixin
 from .permissions import IsAdmin, IsAdminOrReadOnly, IsAuthorOrAdminOrModerator
 from .serializers import (
-    AdminSerializer, CategoriesSerializer,
-    CommentSerializer, GenresSerializer,
-    GetJWTSerializer, ReviewSerializer,
-    SendTokenSerializer, TitleCRUDSerializer,
-    TitleSerializer, UserSerializer
+    AdminSerializer,
+    CategoriesSerializer,
+    CommentSerializer,
+    GenresSerializer,
+    GetJWTSerializer,
+    ReviewSerializer,
+    SendTokenSerializer,
+    TitleCRUDSerializer,
+    TitleSerializer,
+    UserSerializer,
 )
 
 
@@ -40,24 +45,21 @@ def send_token(request):
     serializer = SendTokenSerializer(data=request.data)
     email = request.data.get('email', False)
     username = request.data.get('username', False)
-
-    if serializer.is_valid():
-        user = User.objects.filter(email=email).first()
-        if not user:
-            User.objects.create_user(
-                email=email,
-                username=username)
-        user = User.objects.filter(email=email).first()
-        token = default_token_generator.make_token(user)
-        mail_subject = 'Код подтверждения на YAMDB'
-        message = f'Ваш код подтверждения: {token}'
-        send_mail(mail_subject, message, settings.EMAIL_HOST_USER, [email])
-        answer = {
-            'email': email,
-            'username': username,
-        }
-        return Response(answer, status=status.HTTP_200_OK)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    serializer.is_valid(raise_exception=True)
+    User.objects.get_or_create(
+        email=email,
+        username=username
+    )
+    user = get_object_or_404(User, username=username)
+    token = default_token_generator.make_token(user)
+    mail_subject = 'Код подтверждения на YAMDB'
+    message = f'Ваш код подтверждения: {token}'
+    send_mail(mail_subject, message, settings.EMAIL_HOST_USER, [email])
+    answer = {
+        'email': email,
+        'username': username,
+    }
+    return Response(answer, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
@@ -78,27 +80,26 @@ def get_jwt(request):
         If the user is not found in the database.
     """
     serializer = GetJWTSerializer(data=request.data)
-    if serializer.is_valid():
-        username = serializer.validated_data['username']
-        confirmation_code = serializer.validated_data['confirmation_code']
-        user = get_object_or_404(User, username=username)
-        if not default_token_generator.check_token(user, confirmation_code):
-            return Response(
-                'Неверный код подтверждения',
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        token = AccessToken.for_user(user)
+    serializer.is_valid(raise_exception=True)
+    username = serializer.validated_data['username']
+    confirmation_code = serializer.validated_data['confirmation_code']
+    user = get_object_or_404(User, username=username)
+    if not default_token_generator.check_token(user, confirmation_code):
         return Response(
-            {'token': f'{token}'},
-            status=status.HTTP_200_OK
+            'Неверный код подтверждения',
+            status=status.HTTP_400_BAD_REQUEST
         )
+    token = AccessToken.for_user(user)
     return Response(
-        serializer.errors,
-        status=status.HTTP_400_BAD_REQUEST
+        {'token': f'{token}'},
+        status=status.HTTP_200_OK
     )
 
 
 class UserViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint that allows users to be viewed or edited.
+    """
     queryset = User.objects.all()
     serializer_class = AdminSerializer
     permission_classes = (IsAdmin,)
@@ -114,22 +115,28 @@ class UserViewSet(viewsets.ModelViewSet):
         permission_classes=(IsAuthenticated,),
         url_path='me'
     )
-    def get_current_user_info(self, request):
+    def user_info(self, request):
+        """
+        Returns and update the current user's information.
+
+        :param request: The HTTP request object.
+        :return: The current user's information or update status.
+        """
+        serializer = UserSerializer(
+            request.user,
+            data=request.data,
+            partial=True,
+        )
         if request.method == 'PATCH':
             if request.user.is_admin:
                 serializer = AdminSerializer(
                     request.user,
                     data=request.data,
                     partial=True)
-            else:
-                serializer = UserSerializer(
-                    request.user,
-                    data=request.data,
-                    partial=True)
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
-        serializer = UserSerializer(request.user)
+        serializer.is_valid(raise_exception=True)
         return Response(serializer.data)
 
 

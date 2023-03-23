@@ -46,11 +46,10 @@ def send_token(request):
     email = request.data.get('email', False)
     username = request.data.get('username', False)
     serializer.is_valid(raise_exception=True)
-    User.objects.get_or_create(
+    user, _ = User.objects.get_or_create(
         email=email,
         username=username
     )
-    user = get_object_or_404(User, username=username)
     token = default_token_generator.make_token(user)
     mail_subject = 'Код подтверждения на YAMDB'
     message = f'Ваш код подтверждения: {token}'

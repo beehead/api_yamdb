@@ -7,38 +7,10 @@ from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from reviews.models import Categories, Comment, Genres, Review, Title
 
-from .validators import validate_dublicates, validate_username
+from .validators import validate_dublicates, validate_role ,validate_username
 
 
 class UserSerializer(serializers.ModelSerializer):
-    first_name = serializers.CharField(
-        max_length=150,
-        required=False
-    )
-    last_name = serializers.CharField(
-        max_length=150,
-        required=False
-    )
-    username = serializers.CharField(
-        max_length=150,
-        required=True,
-        validators=[validate_username]
-    )
-
-    class Meta:
-        fields = (
-            'first_name',
-            'last_name',
-            'username',
-            'bio',
-            'email',
-            'role'
-        )
-        read_only_fields = ('role',)
-        model = User
-
-
-class AdminSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(
         max_length=150,
         required=False
@@ -57,6 +29,20 @@ class AdminSerializer(serializers.ModelSerializer):
         required=True,
         validators=[validate_dublicates]
     )
+    role = serializers.CharField(
+        required=False,
+        validators=[validate_role],
+    )
+
+    def update(self, instance, validated_data):
+        if self.context['request'].user.role == 'admin':
+            instance.role = validated_data.get('role', instance.role)
+        instance.first_name = validated_data.get('first_name', instance.first_name)
+        instance.last_name = validated_data.get('last_name', instance.last_name)
+        instance.email = validated_data.get('email', instance.email)
+        instance.bio = validated_data.get('bio', instance.bio)
+        instance.save()
+        return instance
 
     class Meta:
         fields = (
@@ -67,6 +53,7 @@ class AdminSerializer(serializers.ModelSerializer):
             'email',
             'role'
         )
+        read_only_fields = ('role',)
         model = User
 
 

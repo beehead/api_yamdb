@@ -18,7 +18,6 @@ from .filters import TitleFilters
 from .mixins import CRUDMixin
 from .permissions import IsAdmin, IsAdminOrReadOnly, IsAuthorOrAdminOrModerator
 from .serializers import (
-    AdminSerializer,
     CategoriesSerializer,
     CommentSerializer,
     GenresSerializer,
@@ -100,7 +99,7 @@ class UserViewSet(viewsets.ModelViewSet):
     API endpoint that allows users to be viewed or edited.
     """
     queryset = User.objects.all()
-    serializer_class = AdminSerializer
+    serializer_class = UserSerializer
     permission_classes = (IsAdmin,)
     lookup_field = 'username'
     filter_backends = (SearchFilter, )
@@ -125,17 +124,12 @@ class UserViewSet(viewsets.ModelViewSet):
             request.user,
             data=request.data,
             partial=True,
+            context={'request': request},
         )
+        serializer.is_valid(raise_exception=True)
         if request.method == 'PATCH':
-            if request.user.is_admin:
-                serializer = AdminSerializer(
-                    request.user,
-                    data=request.data,
-                    partial=True)
-            serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
-        serializer.is_valid(raise_exception=True)
         return Response(serializer.data)
 
 

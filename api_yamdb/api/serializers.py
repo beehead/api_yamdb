@@ -36,7 +36,7 @@ class UserSerializer(serializers.ModelSerializer):
     )
 
     def update(self, instance, validated_data):
-        if self.context['request'].user.role == 'admin':
+        if self.context['request'].user.is_admin:
             instance.role = validated_data.get('role', instance.role)
         instance.first_name = validated_data.get(
             'first_name',
@@ -60,7 +60,6 @@ class UserSerializer(serializers.ModelSerializer):
             'email',
             'role'
         )
-        read_only_fields = ('role',)
         model = User
 
 

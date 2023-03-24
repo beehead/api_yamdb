@@ -30,13 +30,6 @@ class User(AbstractUser):
     bio = models.TextField(max_length=255, blank=True)
     first_name = models.CharField(max_length=255, blank=True)
     last_name = models.CharField(max_length=255, blank=True)
-    confirmation_code = models.CharField(
-        max_length=20,
-        blank=False,
-        null=True,
-        unique=True,
-        editable=False,
-    )
     is_active = models.BooleanField(default=True)
 
     REQUIRED_FIELDS = ['email']
